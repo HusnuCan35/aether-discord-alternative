@@ -57,6 +57,7 @@ interface AppState {
   isScreenSharing: boolean;
   messages: Record<number, Message[]>;
   voiceUsers: VoiceUser[];
+  onlineUsers: any[];
   music: {
     currentSong: Song;
     isPlaying: boolean;
@@ -104,14 +105,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     channels: [],
     activeServerId: 1,
     activeChannelId: 1,
-    activeOverlay: 'auth', // Default to auth if no user
+    activeOverlay: 'auth',
     isMuted: false,
     isDeafened: false,
     isScreenSharing: false,
     messages: {},
     voiceUsers: [],
+    onlineUsers: [], // New state
     music: { currentSong: PLAYLIST[0], isPlaying: false, volume: 50, progress: 0, duration: 0 }
   });
+
+  // Presence Handling
+  useEffect(() => {
+    if (!state.user || !state.activeChannelId) return;
+
+    const channel = supabase.channel(`presence-${state.activeChannelId}`, {
+      config: { presence: { key: state.user.id } }
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const newState = channel.presenceState();
+        const users = Object.values(newState).flat().map((p: any) => ({
+          id: p.id,
+          user_name: p.user_name,
+          is_muted: p.is_muted
+        }));
+        setState(prev => ({ ...prev, onlineUsers: users }));
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('Join:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('Leave:', key, leftPresences);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            id: state.user?.id,
+            user_name: state.profile?.user_name || "Guest",
+            is_muted: state.isMuted
+          });
+        }
+      });
+
+    return () => { channel.unsubscribe(); };
+  }, [state.user, state.activeChannelId, state.profile, state.isMuted]);
 
   // Auth Handling
   useEffect(() => {

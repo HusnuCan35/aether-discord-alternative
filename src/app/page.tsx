@@ -4,6 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import ChannelList from "@/components/ChannelList";
 import VoiceControls from "@/components/VoiceControls";
 import ChatArea from "@/components/ChatArea";
+import UserList from "@/components/UserList";
 import MusicPlayer from "@/components/MusicPlayer";
 import Overlays from "@/components/Overlays";
 import { useAppStore } from "@/lib/store";
@@ -38,11 +39,17 @@ export default function Home() {
       
       {/* Main Experience Layer */}
       <div className="flex h-screen w-full pt-20 pb-24 px-6 gap-6 relative z-10">
+        {/* Left Sidebar */}
         <div className="w-80 flex flex-col gap-4">
            <ChannelList />
            <VoiceControls />
         </div>
+        
+        {/* Main Chat Area */}
         <ChatArea />
+
+        {/* Right Sidebar */}
+        <UserList />
       </div>
       
       <MusicPlayer />
