@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Send, Hash, Users, Sparkles, Smile, Plus, Image as ImageIcon, Mic } from "lucide-react";
+import { Send, Hash, Users, Sparkles, Smile, Plus, Image as ImageIcon, Mic, Bell, Settings, MessageSquare } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
@@ -202,5 +202,3 @@ function Message({ id, user, content, time, bot }: any) {
   );
 }
 
-// Missing import fix
-import { MessageSquare } from "lucide-react";
