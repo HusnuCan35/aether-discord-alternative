@@ -1,177 +1,138 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Hash, Bell, Users, Search, 
-  Smile, Plus, Monitor, Camera, 
-  Share2, Send, Paperclip, Mic, 
-  Sparkles, MoreVertical
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { Send, Hash, Users, Sparkles, Smile, Plus, Image as ImageIcon, Mic } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 
 export default function ChatArea() {
-  const { messages, activeChannelId, sendMessage, aiEnhance, isScreenSharing, setIsScreenSharing } = useAppStore();
+  const { messages, activeChannelId, channels, sendMessage, aiEnhance } = useAppStore();
   const [inputValue, setInputValue] = useState("");
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleAIEnhance = async () => {
-    if (!inputValue.trim()) return;
-    const enhanced = await aiEnhance(inputValue);
-    setInputValue(enhanced);
-  };
-
+  const activeChannel = channels.find(c => c.id === activeChannelId);
   const currentMessages = messages[activeChannelId] || [];
 
-  // Auto scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [currentMessages]);
 
-  const handleSend = (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputValue.trim()) return;
     sendMessage(activeChannelId, inputValue);
     setInputValue("");
   };
 
+  const handleAiEnhance = async () => {
+    if (!inputValue.trim()) return;
+    setIsEnhancing(true);
+    const enhanced = await aiEnhance(inputValue);
+    setInputValue(enhanced);
+    setIsEnhancing(false);
+  };
+
   return (
-    <div className="flex-1 h-full flex flex-col p-4 z-10">
-      {/* Main Chat Stage */}
-      <motion.div 
-        initial={{ scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="flex-1 flex flex-col glass-card rounded-[40px] overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.4)] border border-white/10 pointer-events-auto"
-      >
-        {/* Stage Header */}
-        <header className="px-8 py-6 flex items-center justify-between border-b border-white/5 bg-white/[0.02] backdrop-blur-md">
-          <div className="flex items-center gap-4">
-             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-aether-cyan border border-white/10">
-               <Hash size={24} />
-             </div>
-             <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">
-                  Channel {activeChannelId}
-                </h2>
-                <p className="text-xs text-white/40 font-medium">Fluid communication active</p>
-             </div>
+    <div className="flex-1 flex flex-col glass-card rounded-[40px] overflow-hidden border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.4)] bg-white/[0.02] backdrop-blur-3xl relative">
+      <div className="absolute inset-0 bg-mesh opacity-10 pointer-events-none" />
+      
+      {/* Header */}
+      <div className="p-6 flex items-center justify-between border-b border-white/5 relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-aether-cyan shadow-inner">
+             <Hash size={24} />
           </div>
-          
-          <div className="flex items-center gap-2">
-             <StageAction icon={<Users size={20} />} />
-             <StageAction icon={<Search size={20} />} />
-             <StageAction icon={<MoreVertical size={20} />} />
+          <div>
+            <h2 className="text-lg font-black text-white tracking-tight">{activeChannel?.name || "Kanal Seçilmedi"}</h2>
+            <p className="text-xs text-white/30 font-medium tracking-wide">Uzay boşluğunda bir frekans...</p>
           </div>
-        </header>
-
-        {/* Message Flow */}
-        <div 
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar scroll-smooth"
-        >
-           <AnimatePresence mode="popLayout">
-              {currentMessages.map((msg) => (
-                <Message key={msg.id} {...msg} />
-              ))}
-           </AnimatePresence>
         </div>
-
-        {/* Detached Floating Input Area */}
-        <form onSubmit={handleSend} className="p-8 pt-0">
-          <motion.div 
-            layout
-            className="glass-dock rounded-[32px] p-2 flex items-center gap-2 shadow-2xl border border-white/10 group focus-within:border-white/20 transition-all"
-          >
-            <button type="button" className="w-12 h-12 rounded-full flex items-center justify-center text-white/40 hover:text-aether-cyan hover:bg-white/5 transition-all">
-              <Plus size={24} />
-            </button>
-            <input 
-              type="text" 
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Manifest a message..."
-              className="flex-1 bg-transparent border-none outline-none text-white text-sm px-2"
-            />
-            <div className="flex items-center gap-1 pr-1">
-               <button type="button" className="w-10 h-10 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-all">
-                 <Smile size={20} />
-               </button>
-               <button type="button" className="w-10 h-10 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-all">
-                 <Paperclip size={20} />
-               </button>
-               <motion.button 
-                 type="submit"
-                 whileHover={{ scale: 1.05 }}
-                 whileTap={{ scale: 0.95 }}
-                 className="w-12 h-12 rounded-[22px] bg-gradient-to-tr from-aether-cyan to-aether-accent text-white flex items-center justify-center shadow-lg shadow-aether-cyan/20"
-               >
-                 <Send size={20} />
-               </motion.button>
-            </div>
-          </motion.div>
-        </form>
-      </motion.div>
-
-      {/* Side Utilities (Floating) */}
-      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4">
-         <UtilityButton 
-            icon={<Monitor size={22} />} 
-            label={isScreenSharing ? "Stop Casting" : "Cast Screen"} 
-            onClick={() => setIsScreenSharing(!isScreenSharing)} 
-         />
-         <UtilityButton 
-            icon={<Sparkles size={22} />} 
-            label="AI Enhance" 
-            onClick={handleAIEnhance} 
-         />
-         <UtilityButton icon={<Bell size={22} />} label="Alerts" />
+        <div className="flex items-center gap-2">
+          <HeaderButton icon={<Users size={20} />} label="Üyeler" />
+          <HeaderButton icon={<Bell size={20} />} label="Bildirimler" />
+          <div className="w-[1px] h-6 bg-white/10 mx-2" />
+          <HeaderButton icon={<Settings size={20} />} label="Ayarlar" />
+        </div>
       </div>
 
-      {/* Screen Share Overlay */}
-      <AnimatePresence>
-        {isScreenSharing && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-aether-cyan/10 backdrop-blur-sm z-[100] flex items-center justify-center pointer-events-none"
-          >
-            <div className="bg-black/60 px-8 py-4 rounded-full border border-aether-cyan/30 flex items-center gap-4 animate-pulse">
-               <Monitor className="text-aether-cyan" />
-               <span className="text-white font-bold tracking-widest uppercase text-xs">Broadcasting Space...</span>
-            </div>
-          </motion.div>
+      {/* Messages Area */}
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar relative z-10"
+      >
+        {currentMessages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
+             <div className="w-20 h-20 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center">
+                <MessageSquare size={32} />
+             </div>
+             <p className="text-sm font-medium italic">Henüz sinyal yok... İlk mesajı sen gönder!</p>
+          </div>
+        ) : (
+          currentMessages.map((msg) => (
+            <Message key={msg.id} {...msg} />
+          ))
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* Input Area */}
+      <div className="p-8 relative z-10">
+        <form 
+          onSubmit={handleSend}
+          className="relative group"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-aether-cyan/10 to-aether-pink/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative flex items-center gap-4 bg-white/[0.05] border border-white/10 rounded-[32px] p-2 pr-4 shadow-2xl backdrop-blur-xl group-focus-within:border-white/20 transition-all">
+            <button type="button" className="p-3 hover:bg-white/5 rounded-2xl text-white/30 hover:text-white transition-all">
+               <Plus size={24} />
+            </button>
+            
+            <input 
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={`${activeChannel?.name || "mesaj"} kanalına mesaj gönder...`}
+              className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/20 font-medium py-4"
+            />
+
+            <div className="flex items-center gap-1">
+               <button 
+                 type="button"
+                 onClick={handleAiEnhance}
+                 disabled={isEnhancing}
+                 className={cn(
+                   "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                   isEnhancing ? "bg-white/10 text-white/40 animate-pulse" : "bg-aether-cyan/10 text-aether-cyan hover:bg-aether-cyan hover:text-black shadow-lg shadow-aether-cyan/10"
+                 )}
+               >
+                 <Sparkles size={14} />
+                 <span>{isEnhancing ? "Yapay Zeka..." : "AI Süsle"}</span>
+               </button>
+               <button type="button" className="p-3 text-white/20 hover:text-white transition-all">
+                  <Smile size={24} />
+               </button>
+               <button type="submit" className="p-3 bg-white text-black rounded-2xl hover:bg-aether-cyan transition-all shadow-xl">
+                  <Send size={24} />
+               </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
-function StageAction({ icon }: { icon: React.ReactNode }) {
+function HeaderButton({ icon, label }: any) {
   return (
-    <button className="p-3 text-white/40 hover:text-white hover:bg-white/5 rounded-2xl transition-all">
-      {icon}
-    </button>
-  );
-}
-
-function UtilityButton({ icon, onClick, label }: any) {
-  return (
-    <div className="group relative">
-       <motion.button
-         whileHover={{ x: -5 }}
-         onClick={onClick}
-         className="w-14 h-14 glass-card rounded-2xl flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 transition-all shadow-xl"
-       >
-         {icon}
-       </motion.button>
-       <div className="absolute right-16 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/80 backdrop-blur-md text-white text-xs font-medium rounded-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap border border-white/10">
+    <button className="p-2.5 hover:bg-white/5 rounded-xl text-white/30 hover:text-white transition-all group relative">
+       {icon}
+       <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 backdrop-blur-md text-white text-[10px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap border border-white/5">
          {label}
        </div>
-    </div>
+    </button>
   );
 }
 
@@ -209,11 +170,10 @@ function Message({ id, user, content, time, bot }: any) {
           </span>
           <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{time}</span>
           
-          {/* Action Buttons (Only for non-bots) */}
           {!bot && (
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-               <button onClick={() => setIsEditing(!isEditing)} className="text-[10px] font-bold text-aether-cyan hover:underline uppercase tracking-wider">Edit</button>
-               <button onClick={() => deleteMessage(id)} className="text-[10px] font-bold text-rose-500 hover:underline uppercase tracking-wider">Delete</button>
+               <button onClick={() => setIsEditing(!isEditing)} className="text-[10px] font-bold text-aether-cyan hover:underline uppercase tracking-wider">Düzenle</button>
+               <button onClick={() => deleteMessage(id)} className="text-[10px] font-bold text-rose-500 hover:underline uppercase tracking-wider">Sil</button>
             </div>
           )}
         </div>
@@ -228,8 +188,8 @@ function Message({ id, user, content, time, bot }: any) {
               autoFocus
             />
             <div className="flex gap-2">
-              <button onClick={handleUpdate} className="text-[10px] font-black text-aether-cyan uppercase bg-aether-cyan/10 px-3 py-1.5 rounded-lg">Save</button>
-              <button onClick={() => setIsEditing(false)} className="text-[10px] font-black text-white/40 uppercase hover:text-white px-3 py-1.5 rounded-lg">Cancel</button>
+              <button onClick={handleUpdate} className="text-[10px] font-black text-aether-cyan uppercase bg-aether-cyan/10 px-3 py-1.5 rounded-lg">Kaydet</button>
+              <button onClick={() => setIsEditing(false)} className="text-[10px] font-black text-white/40 uppercase hover:text-white px-3 py-1.5 rounded-lg">İptal</button>
             </div>
           </div>
         ) : (
@@ -241,3 +201,6 @@ function Message({ id, user, content, time, bot }: any) {
     </motion.div>
   );
 }
+
+// Missing import fix
+import { MessageSquare } from "lucide-react";

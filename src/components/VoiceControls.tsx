@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { Mic, Headphones, Settings, Monitor, Video, Radio, Power, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-
 import { useAppStore } from "@/lib/store";
 
 export default function VoiceControls() {
@@ -16,38 +15,27 @@ export default function VoiceControls() {
   const activeChannel = channels.find(c => c.id === activeChannelId);
   const isInVoice = activeChannel?.type === 'voice';
 
-  // Mic Logic
   useEffect(() => {
     if (isInVoice && !stream) {
       navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: true
-        } 
+        audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true } 
       }).then(s => {
         setStream(s);
-        // Visualizer
         const audioContext = new AudioContext();
         const source = audioContext.createMediaStreamSource(s);
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
         source.connect(analyser);
-        
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
-        
         const draw = () => {
           if (!canvasRef.current) return;
           const ctx = canvasRef.current.getContext('2d');
           if (!ctx) return;
-          
           analyser.getByteFrequencyData(dataArray);
           ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-          
           const barWidth = (canvasRef.current.width / bufferLength) * 2.5;
           let x = 0;
-          
           for(let i = 0; i < bufferLength; i++) {
             const barHeight = dataArray[i] / 4;
             ctx.fillStyle = `rgba(0, 242, 255, ${barHeight / 64})`;
@@ -57,22 +45,15 @@ export default function VoiceControls() {
           requestAnimationFrame(draw);
         };
         draw();
-      }).catch(err => console.error("Mic Error:", err));
+      }).catch(err => console.error("Mikrofon Hatası:", err));
     }
-    
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        setStream(null);
-      }
+      if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); }
     };
   }, [isInVoice]);
 
-  // Handle Mute
   useEffect(() => {
-    if (stream) {
-      stream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-    }
+    if (stream) { stream.getAudioTracks().forEach(t => t.enabled = !isMuted); }
   }, [isMuted, stream]);
 
   return (
@@ -81,13 +62,8 @@ export default function VoiceControls() {
       animate={{ x: 0, opacity: 1 }}
       className="glass-dock p-3 rounded-[32px] flex flex-col gap-4 shadow-[0_30px_60px_rgba(0,0,0,0.4)] border border-white/10 bg-white/[0.05] backdrop-blur-3xl w-full max-w-sm overflow-hidden"
     >
-        {/* Visualizer Background */}
-        <canvas 
-          ref={canvasRef} 
-          className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" 
-          width={400} 
-          height={100}
-        />
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" width={400} height={100} />
+        
         {/* User Status Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -101,7 +77,7 @@ export default function VoiceControls() {
               <span className="text-sm font-black text-white leading-tight tracking-tight">HusnuCan</span>
               <div className="flex items-center gap-1.5">
                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                 <span className="text-[10px] text-white/40 font-black uppercase tracking-widest">Crystal Audio</span>
+                 <span className="text-[10px] text-white/40 font-black uppercase tracking-widest">Kristal Ses</span>
               </div>
             </div>
           </div>
@@ -111,10 +87,10 @@ export default function VoiceControls() {
               icon={noiseCancellation ? Sparkles : Radio} 
               active={noiseCancellation} 
               onClick={() => setNoiseCancellation(!noiseCancellation)} 
-              label={noiseCancellation ? "Denoise Active" : "Denoise Off"}
+              label={noiseCancellation ? "Gürültü Engelleme Aktif" : "Gürültü Engelleme Kapalı"}
               className={noiseCancellation ? "text-aether-cyan bg-aether-cyan/10" : ""}
             />
-            <ControlButton icon={Settings} active={true} label="Audio Engine" />
+            <ControlButton icon={Settings} active={true} label="Ses Motoru" />
           </div>
         </div>
 
@@ -152,21 +128,21 @@ export default function VoiceControls() {
              <div className="grid grid-cols-3 gap-2">
                 <ActionToggle 
                   icon={<Mic size={18} />} 
-                  label="Talk" 
+                  label="Konuş" 
                   active={!isMuted} 
                   onClick={() => setIsMuted(!isMuted)} 
                   danger={isMuted}
                 />
                 <ActionToggle 
                   icon={<Headphones size={18} />} 
-                  label="Listen" 
+                  label="Dinle" 
                   active={!isDeafened} 
                   onClick={() => setIsDeafened(!isDeafened)} 
                   danger={isDeafened}
                 />
                 <ActionToggle 
                   icon={<Power size={18} />} 
-                  label="Exit" 
+                  label="Ayrıl" 
                   active={false}
                   danger
                 />

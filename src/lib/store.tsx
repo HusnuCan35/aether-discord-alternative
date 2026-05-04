@@ -244,7 +244,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const aiEnhance = async (text: string) => {
-    const enhancements = [" ☄️ (Aether Enhanced)", " ✨ (Spatial Clarity)", " 🚀 (Fluid Momentum)"];
+    const enhancements = [" ☄️ (Aether Geliştirildi)", " ✨ (Uzamsal Netlik)", " 🚀 (Akıcı Momentum)"];
     return text.charAt(0).toUpperCase() + text.slice(1) + enhancements[Math.floor(Math.random() * enhancements.length)];
   };
 

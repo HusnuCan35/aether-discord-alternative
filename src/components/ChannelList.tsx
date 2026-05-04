@@ -47,14 +47,14 @@ export default function ChannelList() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-aether-cyan to-aether-accent flex items-center justify-center text-white font-bold">
               {currentServer?.name?.[0] || "A"}
             </div>
-            <h1 className="font-bold text-white text-sm tracking-tight">{currentServer?.name || "Aether Space"}</h1>
+            <h1 className="font-bold text-white text-sm tracking-tight">{currentServer?.name || "Aether Uzayı"}</h1>
           </div>
           <ChevronDown size={16} className="text-white/40" />
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-6">
-          <Category title="Flows" channels={textChannels} activeId={activeChannelId} />
-          <Category title="Atmospheres" channels={voiceChannels} activeId={activeChannelId} />
+          <Category title="Akışlar" channels={textChannels} activeId={activeChannelId} />
+          <Category title="Atmosferler" channels={voiceChannels} activeId={activeChannelId} />
           
           {isCreating && (
             <motion.form 
@@ -66,7 +66,7 @@ export default function ChannelList() {
               <input 
                 value={newName} 
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Channel name..."
+                placeholder="Kanal adı..."
                 className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-aether-cyan"
                 autoFocus
               />
@@ -76,18 +76,18 @@ export default function ChannelList() {
                   onClick={() => setNewType('text')}
                   className={cn("flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase", newType === 'text' ? "bg-aether-cyan text-black" : "bg-white/5 text-white/40")}
                 >
-                  Text
+                  Metin
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setNewType('voice')}
                   className={cn("flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase", newType === 'voice' ? "bg-aether-cyan text-black" : "bg-white/5 text-white/40")}
                 >
-                  Voice
+                  Ses
                 </button>
               </div>
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest">Create</button>
+                <button type="submit" className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest">Oluştur</button>
                 <button type="button" onClick={() => setIsCreating(false)} className="px-3 py-2 text-[10px] font-black text-white/20 uppercase">X</button>
               </div>
             </motion.form>
@@ -100,7 +100,7 @@ export default function ChannelList() {
             className="p-4 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-xs font-medium text-white/60"
           >
              <Plus size={14} />
-             <span>Create New Channel</span>
+             <span>Yeni Kanal Oluştur</span>
           </button>
         )}
       </div>
@@ -147,7 +147,7 @@ function ChannelItem({ channel, active }: { channel: any; active: boolean }) {
              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none"
              autoFocus
            />
-           <button type="submit" className="text-[10px] text-aether-cyan font-bold uppercase">Set</button>
+           <button type="submit" className="text-[10px] text-aether-cyan font-bold uppercase">Kaydet</button>
         </form>
       ) : (
         <button

@@ -17,6 +17,28 @@ export default function Overlays() {
 
   if (!activeOverlay) return null;
 
+  // Özel Durum: Giriş Ekranı (Distraction-Free)
+  if (activeOverlay === 'auth') {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center p-8 bg-black/60 backdrop-blur-md"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md p-12 glass-card rounded-[48px] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+          >
+            <AuthView />
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
   return (
     <AnimatePresence>
       <motion.div
@@ -39,16 +61,18 @@ export default function Overlays() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-aether-cyan to-aether-accent flex items-center justify-center text-white">
                  {activeOverlay === 'profile' ? <User size={20} /> : <Settings size={20} />}
               </div>
-              <h2 className="text-xl font-bold text-white capitalize">{activeOverlay}</h2>
+              <h2 className="text-xl font-bold text-white capitalize">
+                {activeOverlay === 'profile' ? 'Profil' : 'Ayarlar'}
+              </h2>
             </div>
 
             <nav className="flex flex-col gap-1">
-              <NavItem icon={<User size={18} />} label="Account" active={activeOverlay === 'profile'} onClick={() => setActiveOverlay('profile')} />
-              <NavItem icon={<Settings size={18} />} label="Preferences" active={activeOverlay === 'settings'} onClick={() => setActiveOverlay('settings')} />
-              <NavItem icon={<Shield size={18} />} label="Privacy & Safety" />
-              <NavItem icon={<Bell size={18} />} label="Notifications" />
+              <NavItem icon={<User size={18} />} label="Hesap" active={activeOverlay === 'profile'} onClick={() => setActiveOverlay('profile')} />
+              <NavItem icon={<Settings size={18} />} label="Tercihler" active={activeOverlay === 'settings'} onClick={() => setActiveOverlay('settings')} />
+              <NavItem icon={<Shield size={18} />} label="Gizlilik ve Güvenlik" />
+              <NavItem icon={<Bell size={18} />} label="Bildirimler" />
               <div className="my-4 h-[1px] bg-white/5" />
-              <NavItem icon={<LogOut size={18} />} label="Log Out" className="text-rose-500 hover:bg-rose-500/10" onClick={handleLogout} />
+              <NavItem icon={<LogOut size={18} />} label="Çıkış Yap" className="text-rose-500 hover:bg-rose-500/10" onClick={handleLogout} />
             </nav>
           </div>
 
@@ -61,13 +85,27 @@ export default function Overlays() {
               <X size={24} />
             </button>
 
-            {activeOverlay === 'profile' ? <ProfileView /> : 
-             activeOverlay === 'settings' ? <SettingsView /> : 
-             <AuthView />}
+            {activeOverlay === 'profile' ? <ProfileView /> : <SettingsView />}
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function NavItem({ icon, label, active, onClick, className }: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all",
+        active ? "bg-white/10 text-white shadow-lg" : "text-white/40 hover:text-white hover:bg-white/5",
+        className
+      )}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -95,41 +133,41 @@ function AuthView() {
           options: { data: { user_name: userName } } 
         });
         if (error) throw error;
-        alert("Registration successful! Please check your email (or just log in if email confirmation is disabled).");
+        alert("Kayıt başarılı! Lütfen e-postanızı kontrol edin (veya onay kapalıysa direkt giriş yapın).");
         setIsLogin(true);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message === "Invalid login credentials" ? "E-posta veya şifre hatalı." : err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-8">
+    <div className="space-y-8">
       <div className="text-center space-y-2">
         <h2 className="text-4xl font-black text-white tracking-tight">
-          {isLogin ? "Welcome back" : "Create Account"}
+          {isLogin ? "Tekrar Merhaba" : "Hesap Oluştur"}
         </h2>
-        <p className="text-white/40 text-sm">Join the aether spatial experience.</p>
+        <p className="text-white/40 text-sm">Aether uzamsal deneyimine katılın.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {!isLogin && (
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Username</label>
+            <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Kullanıcı Adı</label>
             <input 
               type="text" 
               value={userName} 
               onChange={(e) => setUserName(e.target.value)}
               className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-aether-cyan transition-all"
-              placeholder="StarPilot"
+              placeholder="YıldızPilotu"
               required
             />
           </div>
         )}
         <div className="space-y-1">
-          <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Email</label>
+          <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">E-Posta</label>
           <input 
             type="email" 
             value={email} 
@@ -140,7 +178,7 @@ function AuthView() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Password</label>
+          <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Şifre</label>
           <input 
             type="password" 
             value={password} 
@@ -151,14 +189,14 @@ function AuthView() {
           />
         </div>
 
-        {error && <p className="text-rose-500 text-xs font-bold text-center">{error}</p>}
+        {error && <p className="text-rose-500 text-xs font-bold text-center bg-rose-500/10 p-3 rounded-xl">{error}</p>}
 
         <button 
           disabled={loading}
           type="submit" 
           className="w-full py-4 bg-gradient-to-tr from-aether-cyan to-blue-600 rounded-2xl text-white font-black uppercase tracking-widest shadow-xl hover:shadow-aether-cyan/20 transition-all disabled:opacity-50"
         >
-          {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
+          {loading ? "İşleniyor..." : isLogin ? "Giriş Yap" : "Kayıt Ol"}
         </button>
       </form>
 
@@ -167,30 +205,15 @@ function AuthView() {
           onClick={() => setIsLogin(!isLogin)}
           className="text-xs text-white/40 hover:text-white transition-all font-bold"
         >
-          {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+          {isLogin ? "Hesabınız yok mu? Kayıt olun" : "Zaten hesabınız var mı? Giriş yapın"}
         </button>
       </div>
     </div>
   );
 }
 
-function NavItem({ icon, label, active, onClick, className }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all",
-        active ? "bg-white/10 text-white shadow-lg" : "text-white/40 hover:text-white hover:bg-white/5",
-        className
-      )}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
-
 function ProfileView() {
+  const { profile } = useAppStore();
   return (
     <div className="space-y-12">
       <div className="relative group">
@@ -199,26 +222,26 @@ function ProfileView() {
         </div>
         <div className="absolute -bottom-12 left-10 flex items-end gap-6">
            <div className="w-32 h-32 rounded-[40px] bg-gradient-to-tr from-aether-cyan to-blue-500 border-8 border-[#030014] flex items-center justify-center text-4xl font-bold shadow-2xl relative">
-              H
+              {profile?.user_name?.[0] || 'U'}
               <button className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[32px] transition-all">
                 <Camera size={24} />
               </button>
            </div>
            <div className="pb-4">
-              <h3 className="text-3xl font-black text-white tracking-tight">HusnuCan</h3>
-              <p className="text-sm text-white/40 font-bold uppercase tracking-[0.2em]">Flow Master</p>
+              <h3 className="text-3xl font-black text-white tracking-tight">{profile?.user_name}</h3>
+              <p className="text-sm text-white/40 font-bold uppercase tracking-[0.2em]">Uzay Gezgini</p>
            </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6 mt-20 pt-16">
         <div className="space-y-6">
-           <ProfileField label="Display Name" value="HusnuCan" />
-           <ProfileField label="Email" value="husnu@aether.space" />
+           <ProfileField label="Görünen Ad" value={profile?.user_name} />
+           <ProfileField label="E-posta" value="Kullanıcı e-postası" />
         </div>
         <div className="space-y-6">
-           <ProfileField label="Pronouns" value="He/Him" />
-           <ProfileField label="Space ID" value="#0001" />
+           <ProfileField label="Zamirler" value="O / Onlar" />
+           <ProfileField label="Uzay Kimliği" value="#0001" />
         </div>
       </div>
     </div>
@@ -231,7 +254,7 @@ function ProfileField({ label, value }: any) {
       <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">{label}</label>
       <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-white font-medium flex items-center justify-between group-hover:border-white/10 transition-all">
         {value}
-        <button className="text-xs text-aether-cyan font-bold hover:underline">Edit</button>
+        <button className="text-xs text-aether-cyan font-bold hover:underline">Düzenle</button>
       </div>
     </div>
   );
@@ -241,20 +264,20 @@ function SettingsView() {
   return (
     <div className="space-y-12">
       <div>
-        <h3 className="text-2xl font-bold text-white mb-8">Interface Preferences</h3>
+        <h3 className="text-2xl font-bold text-white mb-8">Arayüz Tercihleri</h3>
         <div className="space-y-4">
-          <SettingsToggle icon={<Moon size={20} />} label="Dark Mode" description="Optimized for deep focus and visual comfort." enabled />
-          <SettingsToggle icon={<Globe size={20} />} label="Spatial Layout" description="Enable fluid, zonal navigation throughout the workspace." enabled />
-          <SettingsToggle icon={<Hash size={20} />} label="Compact Mode" description="Tighter spacing for high-density communication." />
+          <SettingsToggle icon={<Moon size={20} />} label="Karanlık Mod" description="Derin odaklanma ve görsel konfor için optimize edildi." enabled />
+          <SettingsToggle icon={<Globe size={20} />} label="Uzamsal Düzen" description="Çalışma alanı genelinde akıcı, bölgesel navigasyonu etkinleştirin." enabled />
+          <SettingsToggle icon={<Hash size={20} />} label="Kompakt Mod" description="Yüksek yoğunluklu iletişim için daha sıkı boşluklar." />
         </div>
       </div>
 
       <div>
-        <h3 className="text-2xl font-bold text-white mb-8">Space Aura</h3>
+        <h3 className="text-2xl font-bold text-white mb-8">Uzay Aurasi</h3>
         <div className="grid grid-cols-3 gap-4">
-           {['Cyan', 'Accent', 'Pink'].map(color => (
+           {['Turkuaz', 'Vurgu', 'Pembe'].map(color => (
              <button key={color} className="aspect-video rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-center gap-2 hover:bg-white/5 transition-all">
-                <div className={cn("w-3 h-3 rounded-full", `bg-aether-${color.toLowerCase()}`)} />
+                <div className="w-3 h-3 rounded-full bg-aether-cyan" />
                 <span className="text-xs font-bold uppercase tracking-widest text-white/60">{color}</span>
              </button>
            ))}

@@ -15,16 +15,13 @@ export default function Sidebar() {
         animate={{ y: 0, opacity: 1 }}
         className="glass-dock p-3 rounded-[40px] flex items-center gap-3 pointer-events-auto shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-white/10 bg-white/[0.08] backdrop-blur-3xl relative overflow-hidden"
       >
-        {/* Glow Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-aether-accent/5 to-transparent pointer-events-none" />
-        {/* Navigation Actions */}
         <div className="flex items-center gap-2 border-r border-white/10 pr-4 mr-2">
-           <DockItem icon={<MessageSquare size={20} />} label="Messages" active />
-           <DockItem icon={<Search size={20} />} label="Search" />
-           <DockItem icon={<Bell size={20} />} label="Notifications" />
+           <DockItem icon={<MessageSquare size={20} />} label="Mesajlar" active />
+           <DockItem icon={<Search size={20} />} label="Ara" />
+           <DockItem icon={<Bell size={20} />} label="Bildirimler" />
         </div>
 
-        {/* Server List */}
         <div className="flex items-center gap-3">
           {servers.map((server) => (
             <motion.div
@@ -44,12 +41,10 @@ export default function Sidebar() {
                 activeServerId === server.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               )} />
               
-              {/* Active Indicator */}
               {activeServerId === server.id && (
                 <motion.div layoutId="server-active" className="absolute -left-3 w-1.5 h-8 bg-white rounded-r-full shadow-[0_0_15px_white]" />
               )}
 
-              {/* Tooltip */}
               <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/80 backdrop-blur-md text-white text-xs font-medium rounded-full opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap border border-white/10">
                 {server.name}
               </div>
@@ -66,10 +61,9 @@ export default function Sidebar() {
 
         <div className="w-[1px] h-8 bg-white/10 mx-2" />
 
-        {/* User Actions */}
         <div className="flex items-center gap-1">
-           <DockItem icon={<User size={20} />} label="Profile" onClick={() => setActiveOverlay('profile')} />
-           <DockItem icon={<Settings size={20} />} label="Settings" onClick={() => setActiveOverlay('settings')} />
+           <DockItem icon={<User size={20} />} label="Profil" onClick={() => setActiveOverlay('profile')} />
+           <DockItem icon={<Settings size={20} />} label="Ayarlar" onClick={() => setActiveOverlay('settings')} />
         </div>
       </motion.div>
     </div>
@@ -94,7 +88,6 @@ function DockItem({ icon, label, active = false, onClick }: { icon: React.ReactN
       >
         {icon}
       </button>
-      {/* Tooltip */}
       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 backdrop-blur-md text-white text-[10px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap border border-white/5">
         {label}
       </div>
