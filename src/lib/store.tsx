@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./supabase";
+import { User } from "@supabase/supabase-js";
 
 interface Song {
   title: string;
@@ -41,11 +42,16 @@ interface VoiceUser {
 }
 
 interface AppState {
+  user: User | null;
+  profile: {
+    user_name: string;
+    avatar_url?: string;
+  } | null;
   servers: Server[];
   channels: Channel[];
   activeServerId: number;
   activeChannelId: number;
-  activeOverlay: 'profile' | 'settings' | null;
+  activeOverlay: 'profile' | 'settings' | 'auth' | null;
   isMuted: boolean;
   isDeafened: boolean;
   isScreenSharing: boolean;
@@ -61,7 +67,8 @@ interface AppState {
 }
 
 interface AppStore extends AppState {
-  setActiveOverlay: (overlay: 'profile' | 'settings' | null) => void;
+  setUser: (user: User | null) => void;
+  setActiveOverlay: (overlay: AppState["activeOverlay"]) => void;
   setActiveServerId: (id: number) => void;
   setActiveChannelId: (id: number) => void;
   setIsMuted: (muted: boolean) => void;
@@ -77,52 +84,53 @@ interface AppStore extends AppState {
   setMusicState: (updates: Partial<AppState["music"]>) => void;
   skipForward: () => void;
   skipBack: () => void;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined);
 
 const PLAYLIST: Song[] = [
-  {
-    title: "Stardust - Nova Drive",
-    artist: "Midnight Aether",
-    videoId: "jfKfPfyJRdk",
-    thumbnail: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop"
-  },
-  {
-    title: "Neon Nights",
-    artist: "Cyber Synth",
-    videoId: "5qap5aO4i9A",
-    thumbnail: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=200&auto=format&fit=crop"
-  },
-  {
-    title: "Retro Wave",
-    artist: "Lofi Dream",
-    videoId: "17X8X1v9A7M",
-    thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop"
-  }
+  { title: "Stardust - Nova Drive", artist: "Midnight Aether", videoId: "jfKfPfyJRdk", thumbnail: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" },
+  { title: "Neon Nights", artist: "Cyber Synth", videoId: "5qap5aO4i9A", thumbnail: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=200&auto=format&fit=crop" },
+  { title: "Retro Wave", artist: "Lofi Dream", videoId: "17X8X1v9A7M", thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop" }
 ];
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [songIndex, setSongIndex] = useState(0);
   const [state, setState] = useState<AppState>({
+    user: null,
+    profile: null,
     servers: [],
     channels: [],
     activeServerId: 1,
     activeChannelId: 1,
-    activeOverlay: null,
+    activeOverlay: 'auth', // Default to auth if no user
     isMuted: false,
     isDeafened: false,
     isScreenSharing: false,
     messages: {},
     voiceUsers: [],
-    music: {
-      currentSong: PLAYLIST[0],
-      isPlaying: false,
-      volume: 50,
-      progress: 0,
-      duration: 0,
-    }
+    music: { currentSong: PLAYLIST[0], isPlaying: false, volume: 50, progress: 0, duration: 0 }
   });
+
+  // Auth Handling
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setState(prev => ({ ...prev, user: session.user, activeOverlay: null, profile: { user_name: session.user.user_metadata.user_name || session.user.email?.split('@')[0] } }));
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setState(prev => ({ ...prev, user: session.user, activeOverlay: null, profile: { user_name: session.user.user_metadata.user_name || session.user.email?.split('@')[0] } }));
+      } else {
+        setState(prev => ({ ...prev, user: null, activeOverlay: 'auth' }));
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchData = useCallback(async () => {
     const { data: servers } = await supabase.from('servers').select('*');
@@ -139,17 +147,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchData();
-    const serverChannel = supabase.channel('structural-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'servers' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'channels' }, fetchData)
-      .subscribe();
-    return () => { supabase.removeChannel(serverChannel); };
-  }, [fetchData]);
+    if (state.user) fetchData();
+  }, [state.user, fetchData]);
 
+  // Messages & Voice Subscriptions (Same as before but check user)
   useEffect(() => {
+    if (!state.user || !state.activeChannelId) return;
+    
     const fetchMessages = async () => {
-      if (!state.activeChannelId) return;
       const { data } = await supabase.from('messages').select('*').eq('channel_id', state.activeChannelId).order('created_at', { ascending: true });
       if (data) {
         setState(prev => ({
@@ -168,51 +173,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
     fetchMessages();
+
     const channel = supabase.channel(`messages-${state.activeChannelId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `channel_id=eq.${state.activeChannelId}` }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          const newMessage: Message = {
-            id: payload.new.id,
-            user: payload.new.user_name,
-            content: payload.new.content,
-            time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            bot: payload.new.is_bot
-          };
+          const newMessage: Message = { id: payload.new.id, user: payload.new.user_name, content: payload.new.content, time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), bot: payload.new.is_bot };
           setState(prev => ({ ...prev, messages: { ...prev.messages, [state.activeChannelId]: [...(prev.messages[state.activeChannelId] || []), newMessage] } }));
         } else if (payload.eventType === 'UPDATE') {
           setState(prev => ({ ...prev, messages: { ...prev.messages, [state.activeChannelId]: (prev.messages[state.activeChannelId] || []).map(m => m.id === payload.new.id ? { ...m, content: payload.new.content } : m) } }));
         } else if (payload.eventType === 'DELETE') {
           setState(prev => ({ ...prev, messages: { ...prev.messages, [state.activeChannelId]: (prev.messages[state.activeChannelId] || []).filter(m => m.id !== payload.old.id) } }));
         }
-      })
-      .subscribe();
+      }).subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [state.activeChannelId]);
+  }, [state.activeChannelId, state.user]);
 
+  // Voice Sync
   useEffect(() => {
-    const fetchVoiceUsers = async () => {
-      const channelObj = state.channels.find(c => c.id === state.activeChannelId);
-      if (channelObj?.type !== 'voice') {
-        setState(prev => ({ ...prev, voiceUsers: [] }));
-        return;
-      }
-      const { data } = await supabase.from('voice_states').select('*').eq('channel_id', state.activeChannelId);
-      if (data) setState(prev => ({ ...prev, voiceUsers: data }));
-    };
-    fetchVoiceUsers();
-    const channel = supabase.channel(`voice-${state.activeChannelId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'voice_states', filter: `channel_id=eq.${state.activeChannelId}` }, fetchVoiceUsers)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [state.activeChannelId, state.channels]);
-
-  useEffect(() => {
+    if (!state.user) return;
     const syncState = async () => {
       const channelObj = state.channels.find(c => c.id === state.activeChannelId);
       if (channelObj?.type === 'voice') {
         await supabase.from('voice_states').upsert({ 
           channel_id: state.activeChannelId, 
-          user_name: "HusnuCan", 
+          user_name: state.profile?.user_name || "Guest", 
           is_muted: state.isMuted, 
           is_deafened: state.isDeafened,
           updated_at: new Date().toISOString()
@@ -220,13 +204,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
     syncState();
-  }, [state.isMuted, state.isDeafened, state.activeChannelId, state.channels]);
+  }, [state.isMuted, state.isDeafened, state.activeChannelId, state.channels, state.user, state.profile]);
 
-  useEffect(() => {
-    setState(prev => ({ ...prev, music: { ...prev.music, currentSong: PLAYLIST[songIndex] } }));
-  }, [songIndex]);
-
-  const setActiveOverlay = (overlay: 'profile' | 'settings' | null) => setState(prev => ({ ...prev, activeOverlay: overlay }));
+  // Actions
+  const setUser = (user: User | null) => setState(prev => ({ ...prev, user }));
+  const setActiveOverlay = (overlay: AppState["activeOverlay"]) => setState(prev => ({ ...prev, activeOverlay: overlay }));
   const setActiveServerId = (id: number) => {
     const firstChannel = state.channels.find(c => c.server_id === id);
     setState(prev => ({ ...prev, activeServerId: id, activeChannelId: firstChannel ? firstChannel.id : prev.activeChannelId }));
@@ -235,10 +217,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setIsMuted = (muted: boolean) => setState(prev => ({ ...prev, isMuted: muted }));
   const setIsDeafened = (deafened: boolean) => setState(prev => ({ ...prev, isDeafened: deafened, isMuted: deafened ? true : prev.isMuted }));
   const setIsScreenSharing = (sharing: boolean) => setState(prev => ({ ...prev, isScreenSharing: sharing }));
+  const logout = () => supabase.auth.signOut();
   
   const sendMessage = useCallback(async (channelId: number, content: string) => {
-    await supabase.from('messages').insert([{ channel_id: channelId, user_name: "HusnuCan", content }]);
-  }, []);
+    await supabase.from('messages').insert([{ channel_id: channelId, user_name: state.profile?.user_name || "Guest", content }]);
+  }, [state.profile]);
 
   const updateMessage = async (messageId: number, content: string) => {
     await supabase.from('messages').update({ content }).eq('id', messageId);
@@ -271,9 +254,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{ 
-      ...state, setActiveOverlay, setActiveServerId, setActiveChannelId, setIsMuted, setIsDeafened, 
+      ...state, setUser, setActiveOverlay, setActiveServerId, setActiveChannelId, setIsMuted, setIsDeafened, 
       setIsScreenSharing, sendMessage, updateMessage, deleteMessage, createChannel, updateChannel, deleteChannel,
-      aiEnhance, setMusicState, skipForward, skipBack
+      aiEnhance, setMusicState, skipForward, skipBack, logout
     }}>
       {children}
     </AppContext.Provider>

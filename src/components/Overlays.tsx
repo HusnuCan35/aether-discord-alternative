@@ -1,12 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 import { X, User, Settings, Shield, Bell, Moon, Globe, LogOut, Camera, Mail, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Overlays() {
-  const { activeOverlay, setActiveOverlay } = useAppStore();
+  const { activeOverlay, setActiveOverlay, logout } = useAppStore();
+
+  const handleLogout = () => {
+    logout();
+    setActiveOverlay(null);
+  };
 
   if (!activeOverlay) return null;
 
@@ -41,7 +48,7 @@ export default function Overlays() {
               <NavItem icon={<Shield size={18} />} label="Privacy & Safety" />
               <NavItem icon={<Bell size={18} />} label="Notifications" />
               <div className="my-4 h-[1px] bg-white/5" />
-              <NavItem icon={<LogOut size={18} />} label="Log Out" className="text-rose-500 hover:bg-rose-500/10" />
+              <NavItem icon={<LogOut size={18} />} label="Log Out" className="text-rose-500 hover:bg-rose-500/10" onClick={handleLogout} />
             </nav>
           </div>
 
@@ -54,11 +61,116 @@ export default function Overlays() {
               <X size={24} />
             </button>
 
-            {activeOverlay === 'profile' ? <ProfileView /> : <SettingsView />}
+            {activeOverlay === 'profile' ? <ProfileView /> : 
+             activeOverlay === 'settings' ? <SettingsView /> : 
+             <AuthView />}
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function AuthView() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [userName, setUserName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password, 
+          options: { data: { user_name: userName } } 
+        });
+        if (error) throw error;
+        alert("Registration successful! Please check your email (or just log in if email confirmation is disabled).");
+        setIsLogin(true);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto space-y-8">
+      <div className="text-center space-y-2">
+        <h2 className="text-4xl font-black text-white tracking-tight">
+          {isLogin ? "Welcome back" : "Create Account"}
+        </h2>
+        <p className="text-white/40 text-sm">Join the aether spatial experience.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {!isLogin && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Username</label>
+            <input 
+              type="text" 
+              value={userName} 
+              onChange={(e) => setUserName(e.target.value)}
+              className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-aether-cyan transition-all"
+              placeholder="StarPilot"
+              required
+            />
+          </div>
+        )}
+        <div className="space-y-1">
+          <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Email</label>
+          <input 
+            type="email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-aether-cyan transition-all"
+            placeholder="pilot@aether.space"
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-black text-white/20 uppercase tracking-widest px-1">Password</label>
+          <input 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-aether-cyan transition-all"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        {error && <p className="text-rose-500 text-xs font-bold text-center">{error}</p>}
+
+        <button 
+          disabled={loading}
+          type="submit" 
+          className="w-full py-4 bg-gradient-to-tr from-aether-cyan to-blue-600 rounded-2xl text-white font-black uppercase tracking-widest shadow-xl hover:shadow-aether-cyan/20 transition-all disabled:opacity-50"
+        >
+          {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
+        </button>
+      </form>
+
+      <div className="text-center">
+        <button 
+          onClick={() => setIsLogin(!isLogin)}
+          className="text-xs text-white/40 hover:text-white transition-all font-bold"
+        >
+          {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Mic, Headphones, Settings, Monitor, Video, Radio, Power, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 import { useAppStore } from "@/lib/store";
@@ -10,16 +10,84 @@ import { useAppStore } from "@/lib/store";
 export default function VoiceControls() {
   const { isMuted, setIsMuted, isDeafened, setIsDeafened, voiceUsers, activeChannelId, channels } = useAppStore();
   const [noiseCancellation, setNoiseCancellation] = useState(true);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const activeChannel = channels.find(c => c.id === activeChannelId);
   const isInVoice = activeChannel?.type === 'voice';
+
+  // Mic Logic
+  useEffect(() => {
+    if (isInVoice && !stream) {
+      navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          noiseSuppression: true,
+          echoCancellation: true,
+          autoGainControl: true
+        } 
+      }).then(s => {
+        setStream(s);
+        // Visualizer
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(s);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        const draw = () => {
+          if (!canvasRef.current) return;
+          const ctx = canvasRef.current.getContext('2d');
+          if (!ctx) return;
+          
+          analyser.getByteFrequencyData(dataArray);
+          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          
+          const barWidth = (canvasRef.current.width / bufferLength) * 2.5;
+          let x = 0;
+          
+          for(let i = 0; i < bufferLength; i++) {
+            const barHeight = dataArray[i] / 4;
+            ctx.fillStyle = `rgba(0, 242, 255, ${barHeight / 64})`;
+            ctx.fillRect(x, canvasRef.current.height - barHeight, barWidth, barHeight);
+            x += barWidth + 1;
+          }
+          requestAnimationFrame(draw);
+        };
+        draw();
+      }).catch(err => console.error("Mic Error:", err));
+    }
+    
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        setStream(null);
+      }
+    };
+  }, [isInVoice]);
+
+  // Handle Mute
+  useEffect(() => {
+    if (stream) {
+      stream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    }
+  }, [isMuted, stream]);
 
   return (
     <motion.div 
       initial={{ x: -50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="glass-dock p-3 rounded-[32px] flex flex-col gap-4 shadow-[0_30px_60px_rgba(0,0,0,0.4)] border border-white/10 bg-white/[0.05] backdrop-blur-3xl w-full max-w-sm"
+      className="glass-dock p-3 rounded-[32px] flex flex-col gap-4 shadow-[0_30px_60px_rgba(0,0,0,0.4)] border border-white/10 bg-white/[0.05] backdrop-blur-3xl w-full max-w-sm overflow-hidden"
     >
+        {/* Visualizer Background */}
+        <canvas 
+          ref={canvasRef} 
+          className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" 
+          width={400} 
+          height={100}
+        />
         {/* User Status Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
