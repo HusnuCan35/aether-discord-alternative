@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mic, Headphones, Settings, Monitor, Video, Radio, Power, Sparkles, Users } from "lucide-react";
+import { Mic, Headphones, Settings, Monitor, Video, Radio, Power, Sparkles, Users, Volume2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
@@ -19,14 +19,18 @@ export default function VoiceControls() {
   const activeChannel = channels.find(c => c.id === activeChannelId);
   const isInVoice = activeChannel?.type === 'voice';
 
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
   // Audio Context for Visualizer
   useEffect(() => {
-    if (isInVoice && !stream) {
+    if (isInVoice && !stream && audioEnabled) {
       navigator.mediaDevices.getUserMedia({ 
         audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true } 
       }).then(s => {
         setStream(s);
         const audioContext = new AudioContext();
+        audioContextRef.current = audioContext;
         const source = audioContext.createMediaStreamSource(s);
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
@@ -55,7 +59,7 @@ export default function VoiceControls() {
     return () => {
       if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); }
     };
-  }, [isInVoice]);
+  }, [isInVoice, audioEnabled]);
 
   // WebRTC Signaling Logic
   useEffect(() => {
@@ -160,6 +164,15 @@ export default function VoiceControls() {
         {/* Voice Presence & Controls */}
         {isInVoice && (
           <div className="space-y-3 pt-1 border-t border-white/5">
+             {!audioEnabled && (
+               <button 
+                 onClick={() => setAudioEnabled(true)}
+                 className="w-full py-3 bg-aether-cyan/20 border border-aether-cyan/30 rounded-2xl text-aether-cyan text-[10px] font-black uppercase tracking-widest hover:bg-aether-cyan/30 transition-all flex items-center justify-center gap-2"
+               >
+                 <Volume2 size={14} />
+                 Sesi Etkinleştir
+               </button>
+             )}
              <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-aether-cyan animate-pulse shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
@@ -218,12 +231,15 @@ export default function VoiceControls() {
 
 function AudioPlayer({ stream, muted }: { stream: MediaStream, muted: boolean }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  
   useEffect(() => {
-    if (audioRef.current) {
+    if (audioRef.current && stream) {
       audioRef.current.srcObject = stream;
+      audioRef.current.play().catch(e => console.error("Autoplay blocked:", e));
     }
   }, [stream]);
-  return <audio ref={audioRef} autoPlay muted={muted} />;
+
+  return <audio ref={audioRef} autoPlay playsInline muted={muted} className="hidden" />;
 }
 
 function ActionToggle({ icon, label, active, onClick, danger }: any) {

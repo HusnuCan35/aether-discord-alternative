@@ -58,6 +58,7 @@ interface AppState {
   messages: Record<number, Message[]>;
   voiceUsers: VoiceUser[];
   onlineUsers: any[];
+  showUserList: boolean;
   music: {
     currentSong: Song;
     isPlaying: boolean;
@@ -75,6 +76,7 @@ interface AppStore extends AppState {
   setIsMuted: (muted: boolean) => void;
   setIsDeafened: (deafened: boolean) => void;
   setIsScreenSharing: (sharing: boolean) => void;
+  setShowUserList: (show: boolean) => void;
   sendMessage: (channelId: number, content: string) => void;
   updateMessage: (messageId: number, content: string) => void;
   deleteMessage: (messageId: number) => void;
@@ -111,7 +113,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isScreenSharing: false,
     messages: {},
     voiceUsers: [],
-    onlineUsers: [], // New state
+    onlineUsers: [],
+    showUserList: true, // Initial value
     music: { currentSong: PLAYLIST[0], isPlaying: false, volume: 50, progress: 0, duration: 0 }
   });
 
@@ -256,6 +259,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setIsMuted = (muted: boolean) => setState(prev => ({ ...prev, isMuted: muted }));
   const setIsDeafened = (deafened: boolean) => setState(prev => ({ ...prev, isDeafened: deafened, isMuted: deafened ? true : prev.isMuted }));
   const setIsScreenSharing = (sharing: boolean) => setState(prev => ({ ...prev, isScreenSharing: sharing }));
+  const setShowUserList = (show: boolean) => setState(prev => ({ ...prev, showUserList: show }));
   const logout = () => supabase.auth.signOut();
   
   const sendMessage = useCallback(async (channelId: number, content: string) => {
@@ -294,7 +298,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{ 
       ...state, setUser, setActiveOverlay, setActiveServerId, setActiveChannelId, setIsMuted, setIsDeafened, 
-      setIsScreenSharing, sendMessage, updateMessage, deleteMessage, createChannel, updateChannel, deleteChannel,
+      setIsScreenSharing, setShowUserList, sendMessage, updateMessage, deleteMessage, createChannel, updateChannel, deleteChannel,
       aiEnhance, setMusicState, skipForward, skipBack, logout
     }}>
       {children}

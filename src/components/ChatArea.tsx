@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 
 export default function ChatArea() {
-  const { messages, activeChannelId, channels, sendMessage, aiEnhance } = useAppStore();
+  const { messages, activeChannelId, channels, sendMessage, aiEnhance, showUserList, setShowUserList } = useAppStore();
   const [inputValue, setInputValue] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -37,7 +37,7 @@ export default function ChatArea() {
   };
 
   return (
-    <div className="flex-1 flex flex-col glass-card rounded-[40px] overflow-hidden border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.4)] bg-white/[0.02] backdrop-blur-3xl relative">
+    <div className="w-full h-full flex flex-col glass-card rounded-[40px] overflow-hidden border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.4)] bg-white/[0.02] backdrop-blur-3xl relative">
       <div className="absolute inset-0 bg-mesh opacity-10 pointer-events-none" />
       
       {/* Header */}
@@ -52,7 +52,12 @@ export default function ChatArea() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <HeaderButton icon={<Users size={20} />} label="Üyeler" />
+          <HeaderButton 
+            icon={<Users size={20} />} 
+            label="Üyeler" 
+            active={showUserList}
+            onClick={() => setShowUserList(!showUserList)} 
+          />
           <HeaderButton icon={<Bell size={20} />} label="Bildirimler" />
           <div className="w-[1px] h-6 bg-white/10 mx-2" />
           <HeaderButton icon={<Settings size={20} />} label="Ayarlar" />
@@ -125,9 +130,15 @@ export default function ChatArea() {
   );
 }
 
-function HeaderButton({ icon, label }: any) {
+function HeaderButton({ icon, label, active, onClick }: any) {
   return (
-    <button className="p-2.5 hover:bg-white/5 rounded-xl text-white/30 hover:text-white transition-all group relative">
+    <button 
+      onClick={onClick}
+      className={cn(
+        "p-2.5 rounded-xl transition-all group relative",
+        active ? "bg-white/10 text-aether-cyan" : "text-white/30 hover:text-white hover:bg-white/5"
+      )}
+    >
        {icon}
        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 backdrop-blur-md text-white text-[10px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap border border-white/5">
          {label}

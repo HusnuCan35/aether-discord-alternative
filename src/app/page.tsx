@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/Sidebar";
 import ChannelList from "@/components/ChannelList";
 import VoiceControls from "@/components/VoiceControls";
@@ -10,7 +11,7 @@ import Overlays from "@/components/Overlays";
 import { useAppStore } from "@/lib/store";
 
 export default function Home() {
-  const { user, activeOverlay } = useAppStore();
+  const { user, activeOverlay, showUserList } = useAppStore();
 
   // Strict Auth Enforcement: If no user and auth overlay is active, ONLY show auth
   if (!user && activeOverlay === 'auth') {
@@ -37,19 +38,35 @@ export default function Home() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-aether-accent/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-aether-pink/10 blur-[120px] rounded-full pointer-events-none" />
       
-      {/* Main Experience Layer */}
-      <div className="flex h-screen w-full pt-20 pb-24 px-6 gap-6 relative z-10">
-        {/* Left Sidebar */}
-        <div className="w-80 flex flex-col gap-4">
+      {/* Main Experience Layer - Spatial Layout */}
+      <div className="relative h-screen w-full z-10 pointer-events-none">
+        {/* Left Floating Modules */}
+        <div className="absolute left-6 top-24 bottom-28 w-80 flex flex-col gap-4 pointer-events-auto">
            <ChannelList />
            <VoiceControls />
         </div>
         
-        {/* Main Chat Area */}
-        <ChatArea />
+        {/* Centered Main Stage */}
+        <div className="absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
+          <div className="w-[55%] min-w-[800px] h-[78vh] pointer-events-auto">
+            <ChatArea />
+          </div>
+        </div>
 
-        {/* Right Sidebar */}
-        <UserList />
+        {/* Right Floating Modules */}
+        <AnimatePresence>
+          {showUserList && (
+            <motion.div 
+              initial={{ x: 300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 300, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute right-6 top-24 bottom-28 w-72 flex flex-col pointer-events-auto"
+            >
+              <UserList />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       
       <MusicPlayer />
